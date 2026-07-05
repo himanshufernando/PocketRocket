@@ -4,6 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,8 +34,10 @@ fun TransactionRow(
     type: TransactionType,
     dateMillis: Long,
     currencySymbol: String = "LKR",
+    note: String = "",
     onClick: () -> Unit = {},
-    modifier: Modifier = Modifier,
+        onDeleteClick: () -> Unit = {},
+        modifier: Modifier = Modifier,
 ) {
     Row(
         modifier          = modifier
@@ -73,7 +79,17 @@ fun TransactionRow(
                     color = TextSecondary,
                 )
             }
-        }
+                        if (note.isNotBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text       = note,
+                                style      = MaterialTheme.typography.bodySmall,
+                                color      = TextHint,
+                                maxLines   = 1,
+                                overflow   = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
 
         Spacer(Modifier.width(8.dp))
         AmountText(
@@ -84,6 +100,16 @@ fun TransactionRow(
             style      = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )
-    }
-}
+                if (onDeleteClick != {}) {
+                    IconButton(onClick = onDeleteClick) {
+                        Icon(
+                            Icons.Rounded.Delete,
+                            contentDescription = "Delete",
+                            tint = ExpenseCoral,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+        }
 

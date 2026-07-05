@@ -14,6 +14,9 @@ class BudgetRepository(private val dao: BudgetDao) {
     fun getActiveBudgetsAt(timestamp: Long): Flow<List<BudgetEntity>> =
         dao.getActiveBudgetsAt(timestamp)
 
+    fun getLatestRecurringBudgetsUpTo(timestamp: Long): Flow<List<BudgetEntity>> =
+        dao.getLatestRecurringBudgetsUpTo(timestamp)
+
     suspend fun getBudgetById(id: Long): BudgetEntity? = dao.getBudgetById(id)
 
     suspend fun insertBudget(budget: BudgetEntity): Long = dao.insertBudget(budget)

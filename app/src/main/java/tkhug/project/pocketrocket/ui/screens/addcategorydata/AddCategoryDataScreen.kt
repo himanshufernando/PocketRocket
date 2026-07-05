@@ -41,10 +41,7 @@ import tkhug.project.pocketrocket.ui.theme.*
 import tkhug.project.pocketrocket.ui.util.CurrencyFormatter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.MaterialTheme
-
-// ─── Expense / Income quick-tag lists ────────────────────────────────────────
-private val expenseTags = listOf("Candy","Breakfast","Lunch","Dinner","Snacks","Alcohol","Coffee","Groceries","Transport","Shopping","Utilities")
-private val incomeTags  = listOf("Salary","Bonus","Freelance","Investment","Dividend","Gift","Other")
+import kotlin.math.abs
 
 // ─── Toolbar items definition ─────────────────────────────────────────────────
 private data class ToolbarItem(val label: String, val icon: ImageVector, val key: String)
@@ -209,6 +206,25 @@ fun AddCategoryDataScreen(
 
                     Spacer(Modifier.height(8.dp))
 
+                    // ── Budget info row (when budget exists) ──────────────
+                    AnimatedVisibility(
+                        visible = state.categoryBudget != null,
+                        enter   = expandVertically(),
+                        exit    = shrinkVertically(),
+                    ) {
+                        state.categoryBudget?.let { budget ->
+                            BudgetInfoRow(
+                                budget         = budget,
+                                spent          = state.categorySpent,
+                                remaining      = state.budgetRemaining,
+                                progress       = state.budgetProgress,
+                                currencySymbol = state.currencySymbol,
+                                accentColor    = accentColor,
+                                modifier       = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
                     // ── Budget not set banner (expense only) ───────────────
                     AnimatedVisibility(
                         visible = state.showBudgetBanner,
@@ -224,7 +240,8 @@ fun AddCategoryDataScreen(
                     Spacer(Modifier.height(12.dp))
 
                     // ── Quick tag chips ────────────────────────────────────
-                    val tags = if (isIncome) incomeTags else expenseTags
+                    val tags = state.expenseTags
+                    println("xxxxxxxx tags "+tags)
                     QuickTagChips(
                         tags        = tags,
                         selectedTag = state.selectedTag,
@@ -243,9 +260,9 @@ fun AddCategoryDataScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                        .clip(RoundedCornerShape(50))
-                                        .border(1.dp, DividerColor, RoundedCornerShape(50))
-                                        .clickable { navController.navigate(tkhug.project.pocketrocket.ui.navigation.NavRoutes.SETTINGS) }
+                                .clip(RoundedCornerShape(50))
+                                .border(1.dp, DividerColor, RoundedCornerShape(50))
+                                .clickable { navController.navigate(tkhug.project.pocketrocket.ui.navigation.NavRoutes.SETTINGS) }
                                 .padding(horizontal = 10.dp, vertical = 5.dp),
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -284,7 +301,7 @@ fun AddCategoryDataScreen(
                     OutlinedTextField(
                         value         = state.noteText,
                         onValueChange = vm::onNoteChanged,
-                        placeholder   = { Text("Add a note…", color = TextHint, fontSize = 13.sp) },
+                        placeholder   = { Text("Add a note…", color = TextPrimary, fontSize = 13.sp) },
                         modifier      = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 4.dp),
@@ -292,7 +309,10 @@ fun AddCategoryDataScreen(
                         shape         = RoundedCornerShape(12.dp),
                         colors        = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor   = accentColor,
-                            unfocusedBorderColor = DividerColor,
+                            unfocusedBorderColor = TextPrimary,
+                            focusedTextColor     = TextPrimary,
+                            unfocusedTextColor   = TextPrimary,
+                            cursorColor          = accentColor,
                         ),
                         leadingIcon   = {
                             Icon(Icons.Rounded.Notes, null, tint = TextSecondary,
@@ -330,6 +350,69 @@ fun AddCategoryDataScreen(
 // ═════════════════════════════════════════════════════════════════════════════
 // Sub-composables
 // ═════════════════════════════════════════════════════════════════════════════
+
+// ── Budget info row ───────────────────────────────────────────────────────────
+@Composable
+private fun BudgetInfoRow(
+    budget: Double,
+    spent: Double,
+    remaining: Double,
+    progress: Float,
+    currencySymbol: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val isOver = spent > budget
+    val barColor = if (isOver) ExpenseCoral else accentColor
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(accentColor.copy(alpha = 0.08f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
+                Text("Spent", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(
+                    CurrencyFormatter.format(spent, currencySymbol),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = if (isOver) ExpenseCoral else TextPrimary,
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Budget", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(
+                    CurrencyFormatter.format(budget, currencySymbol),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = TextPrimary,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(if (isOver) "Over" else "Left", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(
+                    CurrencyFormatter.format(abs(remaining), currencySymbol),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = if (isOver) ExpenseCoral else accentColor,
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress   = { progress },
+            modifier   = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+            color      = barColor,
+            trackColor = accentColor.copy(alpha = 0.15f),
+        )
+    }
+}
 
 // ── Budget not set banner ─────────────────────────────────────────────────────
 @Composable
@@ -466,7 +549,9 @@ private fun NumericKeypad(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 rowKeys.forEach { key ->
-                    val keyMod = if (key.isConfirm) Modifier.weight(1f).padding(end = endNavPadding) else Modifier.weight(1f)
+                    val keyMod = if (key.isConfirm) Modifier
+                        .weight(1f)
+                        .padding(end = endNavPadding) else Modifier.weight(1f)
                     KeyButton(
                         keyDef        = key,
                         currencyLabel = currencyLabel,
@@ -508,7 +593,11 @@ private fun KeyButton(
     Surface(
         modifier      = modifier
             .height(60.dp)
-            .shadow(elevation = if (keyDef.isConfirm) 4.dp else 0.dp, shape = RoundedCornerShape(14.dp), clip = false),
+            .shadow(
+                elevation = if (keyDef.isConfirm) 4.dp else 0.dp,
+                shape = RoundedCornerShape(14.dp),
+                clip = false
+            ),
         shape         = RoundedCornerShape(14.dp),
         color         = bgColor,
         tonalElevation = 0.dp,
@@ -606,7 +695,9 @@ private fun AccountPickerDialog(
 fun Preview_AddCategoryDataScreen() {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = SheetBg) {
-            Column(modifier = Modifier.fillMaxSize().padding(top = 24.dp)) {
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 24.dp)) {
                 // Top bar
                 Row(
                     modifier = Modifier
@@ -624,24 +715,43 @@ fun Preview_AddCategoryDataScreen() {
                         color = TextPrimary,
                         modifier = Modifier.weight(1f),
                     )
-                    Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(PastelIndigo), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(PastelIndigo), contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.FormatListBulleted, contentDescription = null, tint = PrimaryIndigo)
                     }
                 }
 
                 Spacer(Modifier.height(6.dp))
                 // Amount
-                Text(text = CurrencyFormatter.format(3500.0, "LKR"), fontSize = 44.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                Text(text = CurrencyFormatter.format(3500.0, "LKR"), fontSize = 44.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp))
+
+                Spacer(Modifier.height(8.dp))
+                // Budget info row (budget set)
+                BudgetInfoRow(
+                    budget         = 5000.0,
+                    spent          = 2500.0,
+                    remaining      = 2500.0,
+                    progress       = 0.5f,
+                    currencySymbol = "LKR",
+                    accentColor    = Color(0xFF43A047),
+                    modifier       = Modifier.padding(horizontal = 16.dp),
+                )
 
                 Spacer(Modifier.height(12.dp))
                 // Quick tags
-                QuickTagChips(tags = incomeTags, selectedTag = "Salary", accentColor = Color(0xFF43A047), onTagClick = {})
+                QuickTagChips(tags = listOf("Salary","Bonus","Freelance","Gift"), selectedTag = "Salary", accentColor = Color(0xFF43A047), onTagClick = {})
 
                 Spacer(Modifier.height(12.dp))
                 // Toolbar and keypad preview
                 ToolbarStrip(items = toolbarItems, isContinuousInput = false, onItemClick = {})
                 Spacer(Modifier.height(8.dp))
-                NumericKeypad(currencyLabel = "LKR", onKey = {}, onConfirm = {}, isSaving = false, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp))
+                NumericKeypad(currencyLabel = "LKR", onKey = {}, onConfirm = {}, isSaving = false, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp))
             }
         }
     }

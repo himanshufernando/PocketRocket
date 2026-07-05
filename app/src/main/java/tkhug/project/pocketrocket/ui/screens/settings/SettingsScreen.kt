@@ -101,6 +101,15 @@ fun SettingsScreen(
                     )
                     HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 58.dp))
                     SettingsRow(
+                        icon     = Icons.Rounded.Label,
+                        iconBg   = PastelIndigo,
+                        iconTint = PrimaryIndigo,
+                        title    = "Tags",
+                        subtitle = "Manage income & expense tags",
+                        onClick  = { navController.navigate(tkhug.project.pocketrocket.ui.navigation.NavRoutes.MANAGE_TAGS) },
+                    )
+                    HorizontalDivider(color = DividerColor, thickness = 0.5.dp, modifier = Modifier.padding(start = 58.dp))
+                    SettingsRow(
                         icon     = Icons.Rounded.Backup,
                         iconBg   = PastelTeal,
                         iconTint = Color(0xFF00897B),

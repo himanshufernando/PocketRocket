@@ -26,6 +26,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE categoryId = :categoryId ORDER BY dateTime DESC")
     fun getTransactionsByCategory(categoryId: Long): Flow<List<TransactionEntity>>
 
+    @Query("SELECT * FROM transactions WHERE categoryId = :categoryId AND dateTime BETWEEN :start AND :end ORDER BY dateTime DESC")
+    fun getTransactionsByCategoryAndDateRange(categoryId: Long, start: Long, end: Long): Flow<List<TransactionEntity>>
+
     @Query("SELECT * FROM transactions WHERE accountId = :accountId ORDER BY dateTime DESC")
     fun getTransactionsByAccount(accountId: Long): Flow<List<TransactionEntity>>
 
@@ -46,6 +49,9 @@ interface TransactionDao {
 
     @Delete
     suspend fun deleteTransaction(transaction: TransactionEntity)
+
+        @Query("DELETE FROM transactions WHERE id = :id")
+        suspend fun deleteTransactionById(id: Long)
 
     @Query("SELECT COUNT(*) FROM transactions")
     suspend fun count(): Int

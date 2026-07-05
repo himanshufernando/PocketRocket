@@ -16,6 +16,19 @@ interface BudgetDao {
     @Query("SELECT * FROM budgets WHERE :timestamp BETWEEN startDate AND endDate")
     fun getActiveBudgetsAt(timestamp: Long): Flow<List<BudgetEntity>>
 
+    // Most recent recurring budget per category, for months that have no period-specific budget
+    @Query("""
+        SELECT b.* FROM budgets b
+        INNER JOIN (
+            SELECT categoryId, MAX(startDate) AS maxStart
+            FROM budgets
+            WHERE isRecurring = 1 AND startDate <= :timestamp
+            GROUP BY categoryId
+        ) latest ON b.categoryId = latest.categoryId AND b.startDate = latest.maxStart
+        WHERE b.isRecurring = 1 AND b.startDate <= :timestamp
+    """)
+    fun getLatestRecurringBudgetsUpTo(timestamp: Long): Flow<List<BudgetEntity>>
+
     @Query("SELECT * FROM budgets WHERE id = :id")
     suspend fun getBudgetById(id: Long): BudgetEntity?
 

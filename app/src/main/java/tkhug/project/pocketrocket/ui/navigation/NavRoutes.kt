@@ -12,6 +12,7 @@ object NavRoutes {
     const val BUDGET       = "budget"
     const val SETTINGS     = "settings"
     const val MANAGE_CATEGORIES = "manage_categories"
+    const val MANAGE_TAGS        = "manage_tags"
     const val RECURRING_TRANSACTIONS = "recurring_transactions"
     const val BUDGET_SETTINGS = "budget_settings"
 

@@ -10,6 +10,7 @@ import tkhug.project.pocketrocket.data.model.CategoryEntity
 import tkhug.project.pocketrocket.data.model.TransactionEntity
 import tkhug.project.pocketrocket.data.model.TransactionType
 import tkhug.project.pocketrocket.data.repository.*
+import tkhug.project.pocketrocket.ui.util.DateFormatter
 import tkhug.project.pocketrocket.ui.util.ViewModelFactory
 import java.text.NumberFormat
 import java.util.Locale
@@ -32,11 +33,21 @@ data class AddCategoryDataUiState(
     val savedSuccessfully: Boolean = false,
     val validationError: String? = null,
     val currencySymbol: String = "LKR",
+    val expenseTags: List<String> = emptyList(),
+    val incomeTags: List<String> = emptyList(),
+    val categoryBudget: Double? = null,   // null = no budget set
+    val categorySpent: Double = 0.0,      // spent in current finance period
 ) {
-    /** True only for expense categories that have no monthly budget set. */
+    /** True only for expense categories that have no budget record set. */
     val showBudgetBanner: Boolean
-        get() = category?.type == TransactionType.EXPENSE &&
-                (category?.monthlyBudgetLimit ?: 0.0) <= 0.0
+        get() = category?.type == TransactionType.EXPENSE && categoryBudget == null
+
+    val budgetRemaining: Double
+        get() = (categoryBudget ?: 0.0) - categorySpent
+
+    val budgetProgress: Float
+        get() = if ((categoryBudget ?: 0.0) > 0) (categorySpent / categoryBudget!!).coerceIn(0.0, 1.0).toFloat() else 0f
+
 
     /** Display string computed from raw digits - preserves trailing dot / decimals while typing. */
     val formattedAmount: String
@@ -66,6 +77,8 @@ class AddCategoryDataViewModel(
     private val transactionRepo: TransactionRepository,
     private val accountRepo: AccountRepository,
     private val settingsRepo: AppSettingsRepository,
+    private val tagRepo: TagRepository,
+    private val budgetRepo: BudgetRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddCategoryDataUiState())
@@ -76,6 +89,38 @@ class AddCategoryDataViewModel(
         viewModelScope.launch {
             val cat = categoryRepo.getCategoryById(categoryId)
             _state.update { it.copy(category = cat) }
+        }
+        // Reactive budget amount + current-period spending
+        viewModelScope.launch {
+            settingsRepo.getSettings().flatMapLatest { settings ->
+                val (periodStart, periodEnd) = DateFormatter.financeMonthRangeForNow(
+                    settings.financeMonthStartDay, settings.financeMonthEndDay
+                )
+                combine(
+                    budgetRepo.getBudgetsByCategory(categoryId),
+                    transactionRepo.getTransactionsByCategoryAndDateRange(categoryId, periodStart, periodEnd),
+                ) { budgets, txns ->
+                    // Prefer a budget whose range covers the period start; fall back to latest recurring
+                    val active = budgets.firstOrNull { periodStart in it.startDate..it.endDate }
+                        ?: budgets.filter { it.isRecurring && it.startDate <= periodStart }
+                                  .maxByOrNull { it.startDate }
+                    val spent = txns.sumOf { it.amount }
+                    active?.plannedAmount to spent
+                }
+            }.collect { (budget, spent) ->
+                _state.update { it.copy(categoryBudget = budget, categorySpent = spent) }
+            }
+        }
+        // Reactive tags — two independent collectors so neither blocks the other
+        viewModelScope.launch {
+            tagRepo.getExpenseTags().collect { tags ->
+                _state.update { it.copy(expenseTags = tags.map { t -> t.name }) }
+            }
+        }
+        viewModelScope.launch {
+            tagRepo.getIncomeTags().collect { tags ->
+                _state.update { it.copy(incomeTags = tags.map { t -> t.name }) }
+            }
         }
         // Reactive accounts + settings
         viewModelScope.launch {
@@ -203,6 +248,8 @@ class AddCategoryDataViewModel(
                 transactionRepo = TransactionRepository(db.transactionDao()),
                 accountRepo     = AccountRepository(db.accountDao()),
                 settingsRepo    = AppSettingsRepository(db.appSettingsDao()),
+                tagRepo         = TagRepository(db.tagDao()),
+                budgetRepo      = BudgetRepository(db.budgetDao()),
             )
         }
     }

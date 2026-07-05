@@ -120,6 +120,9 @@ fun AppNavGraph(navController: NavHostController) {
             composable(NavRoutes.MANAGE_CATEGORIES) {
                 tkhug.project.pocketrocket.ui.screens.settings.ManageCategoriesScreen(navController = navController)
             }
+            composable(NavRoutes.MANAGE_TAGS) {
+                tkhug.project.pocketrocket.ui.screens.settings.ManageTagsScreen(navController = navController)
+            }
             composable(NavRoutes.RECURRING_TRANSACTIONS) {
                 tkhug.project.pocketrocket.ui.screens.settings.RecurringTransactionsScreen(navController = navController)
             }

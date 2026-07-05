@@ -10,7 +10,8 @@ data class BudgetEntity(
     val categoryId: Long,
     val periodType: PeriodType,
     val plannedAmount: Double,
-    val startDate: Long,   // epoch millis – inclusive start
-    val endDate: Long,     // epoch millis – inclusive end
+    val startDate: Long,        // epoch millis – inclusive start
+    val endDate: Long,          // epoch millis – inclusive end
+    val isRecurring: Boolean = true, // carries forward to future months
 )
 

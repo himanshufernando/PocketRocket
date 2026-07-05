@@ -2,6 +2,7 @@ package tkhug.project.pocketrocket.domain
 
 import tkhug.project.pocketrocket.data.db.dao.*
 import tkhug.project.pocketrocket.data.model.*
+import tkhug.project.pocketrocket.data.db.dao.TagDao
 import java.util.Calendar
 
 /**
@@ -16,6 +17,7 @@ object SeedDataProvider {
         transactionDao: TransactionDao,
         budgetDao: BudgetDao,
         settingsDao: AppSettingsDao,
+        tagDao: TagDao,
     ) {
         // ── Default settings ────────────────────────────────────────────────
         settingsDao.insertSettings(AppSettingsEntity())
@@ -89,6 +91,17 @@ object SeedDataProvider {
                 )
             }
         budgetDao.insertBudgets(budgets)
+
+        // ── Tags ─────────────────────────────────────────────────────────────
+        val expenseTagNames = listOf("Candy","Breakfast","Lunch","Dinner","Snacks","Alcohol","Coffee","Groceries","Transport","Shopping","Utilities")
+        val incomeTagNames  = listOf("Salary","Bonus","Freelance","Investment","Dividend","Gift","Other")
+
+        val tags = expenseTagNames.mapIndexed { i, name ->
+            TagEntity(name = name, type = TransactionType.EXPENSE, sortOrder = i)
+        } + incomeTagNames.mapIndexed { i, name ->
+            TagEntity(name = name, type = TransactionType.INCOME, sortOrder = i)
+        }
+        tagDao.insertTags(tags)
     }
 }
 

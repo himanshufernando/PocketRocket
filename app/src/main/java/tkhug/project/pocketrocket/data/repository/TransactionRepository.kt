@@ -20,6 +20,9 @@ class TransactionRepository(private val dao: TransactionDao) {
     fun getTransactionsByCategory(categoryId: Long): Flow<List<TransactionEntity>> =
         dao.getTransactionsByCategory(categoryId)
 
+    fun getTransactionsByCategoryAndDateRange(categoryId: Long, start: Long, end: Long): Flow<List<TransactionEntity>> =
+        dao.getTransactionsByCategoryAndDateRange(categoryId, start, end)
+
     fun getTransactionsByAccount(accountId: Long): Flow<List<TransactionEntity>> =
         dao.getTransactionsByAccount(accountId)
 
@@ -36,5 +39,8 @@ class TransactionRepository(private val dao: TransactionDao) {
 
     suspend fun deleteTransaction(transaction: TransactionEntity) =
         dao.deleteTransaction(transaction)
+
+        suspend fun deleteTransactionById(id: Long) =
+            dao.deleteTransactionById(id)
 }
 

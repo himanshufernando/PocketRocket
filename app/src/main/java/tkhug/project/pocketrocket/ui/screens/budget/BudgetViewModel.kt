@@ -65,10 +65,15 @@ class BudgetViewModel(
         .flatMapLatest { (period, settings, categories) ->
             combine(
                 budgetRepo.getActiveBudgetsAt(period.startMillis),
+                budgetRepo.getLatestRecurringBudgetsUpTo(period.startMillis),
                 transactionRepo.getTransactionsByDateRange(period.startMillis, period.endMillis),
-            ) { budgets, transactions ->
-                val budgetByCat = budgets.associateBy { it.categoryId }
-                val spentByCat  = transactions
+            ) { periodBudgets, recurringBudgets, transactions ->
+                // Period-specific budgets take priority; recurring ones fill in the rest
+                val periodByCat    = periodBudgets.associateBy { it.categoryId }
+                val recurringByCat = recurringBudgets.associateBy { it.categoryId }
+                val budgetByCat    = recurringByCat + periodByCat
+
+                val spentByCat = transactions
                     .filter { it.type == TransactionType.EXPENSE }
                     .groupBy { it.categoryId }
                     .mapValues { (_, list) -> list.sumOf { it.amount } }
@@ -132,6 +137,7 @@ class BudgetViewModel(
                 plannedAmount = plannedAmount,
                 startDate = startMillis,
                 endDate = endMillis,
+                isRecurring = true,
             )
             budgetRepo.insertBudget(budget)
         }

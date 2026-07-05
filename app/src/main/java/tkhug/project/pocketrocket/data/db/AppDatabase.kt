@@ -20,8 +20,9 @@ import tkhug.project.pocketrocket.domain.SeedDataProvider
         AccountEntity::class,
         BudgetEntity::class,
         AppSettingsEntity::class,
+        tkhug.project.pocketrocket.data.model.TagEntity::class,
     ],
-    version = 3,
+    version = 5,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -32,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun budgetDao(): BudgetDao
     abstract fun appSettingsDao(): AppSettingsDao
+    abstract fun tagDao(): tkhug.project.pocketrocket.data.db.dao.TagDao
 
     companion object {
         @Volatile
@@ -45,7 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "pocket_rocket_db",
                 )
                     // Migrations: 1->2 and 2->3
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .addCallback(SeedCallback(scope))
                     .build()
                     .also { INSTANCE = it }
@@ -65,6 +67,7 @@ abstract class AppDatabase : RoomDatabase() {
                             transactionDao = database.transactionDao(),
                             budgetDao      = database.budgetDao(),
                             settingsDao    = database.appSettingsDao(),
+                            tagDao         = database.tagDao(),
                         )
                     }
                 }
@@ -75,6 +78,28 @@ abstract class AppDatabase : RoomDatabase() {
                 // add new column with default 0 for existing rows
                 database.execSQL(
                     "ALTER TABLE app_settings ADD COLUMN financeMonthOffsetMonths INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // All existing budgets are treated as recurring by default
+                database.execSQL(
+                    "ALTER TABLE budgets ADD COLUMN isRecurring INTEGER NOT NULL DEFAULT 1"
+                )
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `tags` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `sortOrder` INTEGER NOT NULL DEFAULT 0
+                    )"""
                 )
             }
         }

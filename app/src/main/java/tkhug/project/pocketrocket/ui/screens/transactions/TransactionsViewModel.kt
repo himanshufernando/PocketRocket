@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import tkhug.project.pocketrocket.data.model.TransactionEntity
 import tkhug.project.pocketrocket.data.model.TransactionType
 import tkhug.project.pocketrocket.data.repository.*
 import tkhug.project.pocketrocket.ui.screens.PeriodUiState
@@ -100,6 +101,12 @@ class TransactionsViewModel(
             DateFormatter.shiftFinanceMonth(_period.value.startMillis, _period.value.endMillis, -1, financeStartDay, financeEndDay)
         }
         _period.value = _period.value.copy(startMillis = s, endMillis = e)
+    }
+
+    fun deleteTransaction(id: Long) {
+        viewModelScope.launch {
+                transactionRepo.deleteTransactionById(id)
+        }
     }
 
     fun nextPeriod() {
