@@ -1,10 +1,14 @@
 package tkhug.project.pocketrocket.ui.screens.transactions
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -22,7 +26,6 @@ import tkhug.project.pocketrocket.ui.navigation.NavRoutes
 import tkhug.project.pocketrocket.ui.theme.*
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.ui.tooling.preview.Preview
 import tkhug.project.pocketrocket.data.model.TransactionType
 
@@ -37,6 +40,18 @@ fun TransactionsScreen(
 
     var expandedItemId by remember { mutableStateOf<Long?>(null) }
     var deleteTargetId by remember { mutableStateOf<Long?>(null) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+
+    // Filter bottom sheet
+    if (showFilterSheet) {
+        FilterBottomSheet(
+            state             = state,
+            onCategorySelected = vm::setSelectedCategory,
+            onTagSelected     = vm::setSelectedTag,
+            onClearFilters    = vm::clearFilters,
+            onDismiss         = { showFilterSheet = false },
+        )
+    }
 
     // Delete confirmation dialog
     deleteTargetId?.let { id ->
@@ -81,7 +96,9 @@ fun TransactionsScreen(
                     onPreviousPeriod = vm::previousPeriod,
                     onNextPeriod     = vm::nextPeriod,
                     actionIcon       = Icons.Rounded.FilterList,
-                    onActionClick    = { /* TODO: filter sheet */ },
+                        onActionClick    = { showFilterSheet = true },
+                        actionBadge      = state.hasActiveFilter,
+                        actionIconTint   = if (state.hasActiveFilter) PrimaryIndigoDark else PrimaryIndigo,
                 )
             }
 
@@ -96,6 +113,38 @@ fun TransactionsScreen(
                         selected = state.filterTab,
                         onSelect = vm::setFilterTab,
                     )
+                }
+            }
+
+            // Active filter chips row
+            if (state.hasActiveFilter) {
+                item {
+                    LazyRow(
+                        modifier            = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        state.selectedCategoryId?.let { catId ->
+                            val cat = state.availableCategories.find { it.id == catId }
+                            if (cat != null) {
+                                item {
+                                    ActiveFilterChip(
+                                        label    = cat.name,
+                                        colorHex = cat.colorHex,
+                                        onRemove = { vm.setSelectedCategory(null) },
+                                    )
+                                }
+                            }
+                        }
+                        state.selectedTagName?.let { tag ->
+                            item {
+                                ActiveFilterChip(
+                                    label    = tag,
+                                    colorHex = null,
+                                    onRemove = { vm.setSelectedTag(null) },
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -133,6 +182,134 @@ fun TransactionsScreen(
                             modifier         = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp), color = DividerColor, thickness = 0.5.dp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Filter components ─────────────────────────────────────────────────────────
+
+@Composable
+private fun ActiveFilterChip(
+    label: String,
+    colorHex: String?,
+    onRemove: () -> Unit,
+) {
+    val chipColor = colorHex?.let {
+        runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrDefault(PrimaryIndigo)
+    } ?: PrimaryIndigo
+    Surface(
+        shape         = CircleShape,
+        color         = chipColor.copy(alpha = 0.12f),
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier          = Modifier.padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = chipColor, fontWeight = FontWeight.SemiBold)
+            IconButton(onClick = onRemove, modifier = Modifier.size(16.dp)) {
+                Icon(Icons.Rounded.Close, contentDescription = "Remove filter", tint = chipColor, modifier = Modifier.size(12.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterBottomSheet(
+    state: TransactionsUiState,
+    onCategorySelected: (Long?) -> Unit,
+    onTagSelected: (String?) -> Unit,
+    onClearFilters: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            // Header
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text       = "Filter Transactions",
+                    style      = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (state.hasActiveFilter) {
+                    TextButton(onClick = onClearFilters) {
+                        Text("Clear all", color = ExpenseCoral)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Category section ──────────────────────────────────────────────
+            Text("Category", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = state.selectedCategoryId == null,
+                        onClick  = { onCategorySelected(null) },
+                        label    = { Text("All") },
+                    )
+                }
+                items(state.availableCategories, key = { it.id }) { cat ->
+                    val catColor = runCatching {
+                        Color(android.graphics.Color.parseColor(cat.colorHex))
+                    }.getOrDefault(PrimaryIndigo)
+                    FilterChip(
+                        selected    = state.selectedCategoryId == cat.id,
+                        onClick     = {
+                            onCategorySelected(if (state.selectedCategoryId == cat.id) null else cat.id)
+                        },
+                        label       = { Text(cat.name) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(catColor, CircleShape),
+                            )
+                        },
+                    )
+                }
+            }
+
+            // ── Tag section ───────────────────────────────────────────────────
+            if (state.availableTags.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text("Tag", style = MaterialTheme.typography.labelLarge, color = TextSecondary)
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChip(
+                            selected = state.selectedTagName == null,
+                            onClick  = { onTagSelected(null) },
+                            label    = { Text("All") },
+                        )
+                    }
+                    items(state.availableTags, key = { it.id }) { tag ->
+                        FilterChip(
+                            selected = state.selectedTagName == tag.name,
+                            onClick  = {
+                                onTagSelected(if (state.selectedTagName == tag.name) null else tag.name)
+                            },
+                            label    = { Text(tag.name) },
+                        )
                     }
                 }
             }

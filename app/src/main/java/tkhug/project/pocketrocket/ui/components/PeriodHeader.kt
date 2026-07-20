@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,8 @@ fun PeriodHeader(
     onPeriodLabelClick: () -> Unit = {},
     actionIcon: ImageVector? = null,
     onActionClick: () -> Unit = {},
+    actionIconTint: Color = PrimaryIndigo,
+    actionBadge: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -85,8 +88,13 @@ fun PeriodHeader(
         // ── Optional action icon ────────────────────────────────────────────
         if (actionIcon != null) {
             Spacer(Modifier.width(4.dp))
-            IconButton(onClick = onActionClick, modifier = Modifier.size(32.dp)) {
-                Icon(actionIcon, "Action", tint = PrimaryIndigo, modifier = Modifier.size(20.dp))
+            BadgedBox(
+                badge = { if (actionBadge) Badge(containerColor = Color(0xFFEF5350)) },
+                modifier = Modifier.size(32.dp),
+            ) {
+                IconButton(onClick = onActionClick, modifier = Modifier.size(32.dp)) {
+                    Icon(actionIcon, "Action", tint = actionIconTint, modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
